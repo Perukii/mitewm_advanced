@@ -6,11 +6,11 @@ import "C"
 
 func (client *Client) getSizeHints(hints *C.XSizeHints) {
 	var supplied C.long
-	C.XGetWMNormalHints(display, client.window[CLIENT_APP], hints, &supplied)
+	C.XGetWMNormalHints(wm_display, client.window[CLIENT_APP], hints, &supplied)
 }
 
 func (client *Client) getClassHint(hint *C.XClassHint) {
-	C.XGetClassHint(display, client.window[CLIENT_APP], hint)
+	C.XGetClassHint(wm_display, client.window[CLIENT_APP], hint)
 }
 
 func newClient(
@@ -26,13 +26,13 @@ func newClient(
 	}
 
 	var targetAttributes C.XWindowAttributes
-	C.XGetWindowAttributes(display, targetWindow, &targetAttributes)
+	C.XGetWindowAttributes(wm_display, targetWindow, &targetAttributes)
 
 	var client Client
 	client.window[CLIENT_APP] = targetWindow
 
 	C.XGrabButton(
-		display,
+		wm_display,
 		C.AnyButton,
 		C.AnyModifier,
 		client.window[CLIENT_APP],
@@ -46,7 +46,7 @@ func newClient(
 
 	if *lastUngrabbedApp != C.None {
 		C.XGrabButton(
-			display,
+			wm_display,
 			C.AnyButton,
 			C.AnyModifier,
 			*lastUngrabbedApp,
@@ -59,7 +59,7 @@ func newClient(
 		)
 	}
 
-	C.XSetInputFocus(display, client.window[CLIENT_APP], C.RevertToNone, C.CurrentTime)
+	C.XSetInputFocus(wm_display, client.window[CLIENT_APP], C.RevertToNone, C.CurrentTime)
 
 	client.localBorderWidth = WIDTH_DIFF + int(targetAttributes.border_width)*2
 	client.localBorderHeight = HEIGHT_DIFF + int(targetAttributes.border_width)*2
@@ -68,16 +68,16 @@ func newClient(
 	boxHeight := client.localBorderHeight + int(targetAttributes.height)
 
 	var boxVisualInfo C.XVisualInfo
-	C.XMatchVisualInfo(display, C.XDefaultScreen(display), 32, C.TrueColor, &boxVisualInfo)
+	C.XMatchVisualInfo(wm_display, C.XDefaultScreen(wm_display), 32, C.TrueColor, &boxVisualInfo)
 
 	var boxAttributes C.XSetWindowAttributes
-	boxAttributes.colormap = C.XCreateColormap(display, rootWindow, boxVisualInfo.visual, C.AllocNone)
+	boxAttributes.colormap = C.XCreateColormap(wm_display, C.XDefaultRootWindow(wm_display), boxVisualInfo.visual, C.AllocNone)
 	boxAttributes.override_redirect = 1
 
 	// BOXを作成
 	client.window[CLIENT_BOX] = C.XCreateWindow(
-		display,
-		rootWindow,
+		wm_display,
+		C.XDefaultRootWindow(wm_display),
 		targetAttributes.x-CONFIG_BOX_BORDER,
 		targetAttributes.y-CONFIG_BOX_BORDER,
 		C.uint(boxWidth),
@@ -92,18 +92,18 @@ func newClient(
 
 	// ウインドウの設定
 	C.XReparentWindow(
-		display,
+		wm_display,
 		client.window[CLIENT_APP],
 		client.window[CLIENT_BOX],
 		CONFIG_BOX_BORDER,
 		CONFIG_TITLEBAR_HEIGHT+CONFIG_BOX_BORDER,
 	)
-	C.XMapRaised(display, client.window[CLIENT_BOX])
-	C.XSelectInput(display, client.window[CLIENT_BOX], C.SubstructureNotifyMask)
+	C.XMapRaised(wm_display, client.window[CLIENT_BOX])
+	C.XSelectInput(wm_display, client.window[CLIENT_BOX], C.SubstructureNotifyMask)
 
 	// ウインドウのcairoコンテキストを作成
 	client.surface[CLIENT_BOX] = C.cairo_xlib_surface_create(
-		display,
+		wm_display,
 		client.window[CLIENT_BOX],
 		boxVisualInfo.visual,
 		C.int(boxWidth),

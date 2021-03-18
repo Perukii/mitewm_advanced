@@ -3,14 +3,6 @@ package main
 // #include <cairo/cairo-xlib.h>
 import "C"
 
-type Client struct {
-	window                              [CLIENT_WIDGETS]C.Window
-	surface                             [1]*C.cairo_surface_t
-	cr                                  [1]*C.cairo_t
-	title                               string
-	localBorderWidth, localBorderHeight int
-}
-
 func (client *Client) drawClient() {
 	overallWidth := int(C.cairo_xlib_surface_get_width(client.surface[CLIENT_BOX]))
 	overallHeight := int(C.cairo_xlib_surface_get_height(client.surface[CLIENT_BOX]))
@@ -39,7 +31,7 @@ func (client *Client) drawClient() {
 	// TITLEBAR描画の前に、ターゲットがFOCUSされているか確認(されている場合、色を強調)
 	var focusedWindow C.Window
 	var focusedWindowRevert C.int
-	C.XGetInputFocus(display, &focusedWindow, &focusedWindowRevert)
+	C.XGetInputFocus(wm_display, &focusedWindow, &focusedWindowRevert)
 	if focusedWindow == client.window[CLIENT_APP] && focusedWindowRevert == C.CurrentTime {
 		titlebarEmphasization = 1.0
 	}

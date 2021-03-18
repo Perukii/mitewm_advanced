@@ -3,27 +3,17 @@ package main
 // #include <cairo/cairo-xlib.h>
 import "C"
 
-type Background struct {
-	window     C.Window
-	surface    *C.cairo_surface_t
-	image      *C.cairo_surface_t
-	cr         *C.cairo_t
-	imageScale C.double
-}
-
-var background Background
-
 func setBackground(file string) {
 	var rootAttributes C.XWindowAttributes
-	C.XGetWindowAttributes(display, rootWindow, &rootAttributes)
+	C.XGetWindowAttributes(wm_display, C.XDefaultRootWindow(wm_display), &rootAttributes)
 	background.window = C.XCreateSimpleWindow(
-		display, rootWindow,
+		wm_display, C.XDefaultRootWindow(wm_display),
 		rootAttributes.x, rootAttributes.y, C.uint(rootAttributes.width), C.uint(rootAttributes.height),
-		0, 0, C.XBlackPixel(display, 0),
+		0, 0, C.XBlackPixel(wm_display, 0),
 	)
 	background.surface = C.cairo_xlib_surface_create(
-		display, background.window,
-		C.XDefaultVisual(display, C.XDefaultScreen(display)),
+		wm_display, background.window,
+		C.XDefaultVisual(wm_display, C.XDefaultScreen(wm_display)),
 		rootAttributes.width, rootAttributes.height,
 	)
 	background.cr = C.cairo_create(background.surface)
@@ -39,7 +29,7 @@ func setBackground(file string) {
 	}
 
 	C.cairo_set_antialias(background.cr, C.CAIRO_ANTIALIAS_SUBPIXEL)
-	C.XMapWindow(display, background.window)
+	C.XMapWindow(wm_display, background.window)
 }
 
 func drawBackground() {

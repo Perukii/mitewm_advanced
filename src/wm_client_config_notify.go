@@ -11,7 +11,7 @@ func (client *Client) resizeWindow(
 	xDiff, yDiff int,
 	xMove, yMove bool,
 ) {
-	if C.XEventsQueued(display, C.QueuedAlready) >= 2 {
+	if C.XEventsQueued(wm_display, C.QueuedAlready) >= 2 {
 		return
 	}
 
@@ -53,14 +53,14 @@ func (client *Client) resizeWindow(
 		posY += 0
 	}
 	C.XMoveWindow(
-		display,
+		wm_display,
 		client.window[CLIENT_BOX],
 		C.int(posX),
 		C.int(posY),
 	)
 
 	C.XResizeWindow(
-		display,
+		wm_display,
 		client.window[CLIENT_APP],
 		C.uint(fWidth-client.localBorderWidth),
 		C.uint(fHeight-client.localBorderHeight),
@@ -76,7 +76,7 @@ func (client *Client) configNotify(event *C.XEvent) {
 	fHeight := int(xconfigure.height) + client.localBorderHeight
 
 	C.XResizeWindow(
-		display,
+		wm_display,
 		client.window[CLIENT_BOX],
 		C.uint(fWidth),
 		C.uint(fHeight),

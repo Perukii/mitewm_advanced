@@ -41,7 +41,7 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 			}
 		} else {
 			// 掴まれているウインドウの情報を更新する作業。
-			C.XGetWindowAttributes(display, client.window[CLIENT_BOX], &info.attributes)
+			C.XGetWindowAttributes(wm_display, client.window[CLIENT_BOX], &info.attributes)
 
 			info.button = uint(xbutton.button)
 			info.window = xbutton.subwindow
@@ -70,26 +70,26 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 				var deleteEvent C.XEvent
 				xclient := (*C.XClientMessageEvent)(unsafe.Pointer(&deleteEvent))
 				xclient._type = C.ClientMessage
-				xclient.message_type = C.XInternAtom(display, C.CString("WM_PROTOCOLS"), C.True)
+				xclient.message_type = C.XInternAtom(wm_display, C.CString("WM_PROTOCOLS"), C.True)
 				xclient.format = 32
 				l := (*[5]C.ulong)(unsafe.Pointer(&xclient.data))
-				(*l)[0] = C.XInternAtom(display, C.CString("WM_DELETE_WINDOW"), C.True)
+				(*l)[0] = C.XInternAtom(wm_display, C.CString("WM_DELETE_WINDOW"), C.True)
 				(*l)[1] = C.CurrentTime
 				xclient.window = client.window[CLIENT_APP]
 
 				// 除去イベントを送信
-				C.XSendEvent(display, client.window[CLIENT_APP], C.False, C.NoEventMask, &deleteEvent)
+				C.XSendEvent(wm_display, client.window[CLIENT_APP], C.False, C.NoEventMask, &deleteEvent)
 			}
 		}
 
-		C.XRaiseWindow(display, client.window[CLIENT_BOX])
-		C.XSetInputFocus(display, client.window[CLIENT_APP], C.RevertToNone, C.CurrentTime)
+		C.XRaiseWindow(wm_display, client.window[CLIENT_BOX])
+		C.XSetInputFocus(wm_display, client.window[CLIENT_APP], C.RevertToNone, C.CurrentTime)
 
 		if *lastUngrabbedApp != C.None {
 			client := clientTable.findFromApp(*lastUngrabbedApp)
 			client.drawClient()
 			C.XGrabButton(
-				display,
+				wm_display,
 				C.AnyButton,
 				C.AnyModifier,
 				*lastUngrabbedApp,
@@ -106,15 +106,15 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 			client.drawClient()
 		}
 
-		C.XUngrabButton(display, C.AnyButton, C.AnyModifier, client.window[CLIENT_APP])
+		C.XUngrabButton(wm_display, C.AnyButton, C.AnyModifier, client.window[CLIENT_APP])
 		*lastUngrabbedApp = client.window[CLIENT_APP]
 	case C.ButtonRelease:
 		// 掴んだウインドウを離す。
 		info.window = C.None
 		// カーソルを定義。
 		C.XDefineCursor(
-			display, rootWindow,
-			C.XCreateFontCursor(display, C.XC_left_ptr),
+			wm_display, C.XDefaultRootWindow(wm_display),
+			C.XCreateFontCursor(wm_display, C.XC_left_ptr),
 		)
 	case C.ConfigureNotify:
 		xconfigure := (*C.XConfigureEvent)(unsafe.Pointer(&event))
@@ -125,7 +125,7 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 
 		// BOXもろとも除去してしまう。
 		xclient := (*C.XClientMessageEvent)(unsafe.Pointer(&event))
-		if xclient.window == C.None || xclient.window == rootWindow {
+		if xclient.window == C.None || xclient.window == C.XDefaultRootWindow(wm_display) {
 			break
 		}
 
@@ -138,7 +138,7 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 		if *lastUngrabbedApp == client.window[CLIENT_APP] {
 			*lastUngrabbedApp = C.None
 		}
-		C.XDestroyWindow(display, client.window[CLIENT_BOX])
+		C.XDestroyWindow(wm_display, client.window[CLIENT_BOX])
 		delete(*clientTable, client.window[CLIENT_BOX])
 	case C.MotionNotify:
 		if info.window == C.None {
@@ -158,7 +158,7 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 		if info.eventProperty == 0 {
 			// ウインドウを動かす。
 			C.XMoveWindow(
-				display,
+				wm_display,
 				info.window,
 				info.attributes.x+C.int(xDiff),
 				info.attributes.y+C.int(yDiff),
@@ -201,9 +201,9 @@ func handle_event(event C.XEvent, clientTable *ClientTable, lastUngrabbedApp *C.
 			}
 
 			C.XDefineCursor(
-				display,
-				rootWindow,
-				C.XCreateFontCursor(display, C.uint(cursorInfo)),
+				wm_display,
+				C.XDefaultRootWindow(wm_display),
+				C.XCreateFontCursor(wm_display, C.uint(cursorInfo)),
 			)
 
 			client.resizeWindow(
